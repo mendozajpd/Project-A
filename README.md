@@ -1,4 +1,4 @@
 # project-A
-This is the first project of Studio Kulto
+Studio Kulto 1st Proj
 
 ( Name of Project is Temporary )
