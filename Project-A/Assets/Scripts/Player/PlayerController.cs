@@ -105,7 +105,6 @@ public class PlayerController : MonoBehaviour
 
     public void SwordAttack()
     {
-        LockMovement();
         if(spriteRenderer.flipX == true)
         {
             swordAttack.AttackLeft();
@@ -116,10 +115,12 @@ public class PlayerController : MonoBehaviour
 
     public void EndSwordAttack()
     {
-        UnlockMovement();
         swordAttack.StopAttack();
     }
 
+
+    //locks and unlocks movement
+    /*
     public void LockMovement()
     {
         canMove = false;
@@ -129,5 +130,6 @@ public class PlayerController : MonoBehaviour
     {
         canMove = true;
     }
+    */
 
 }
