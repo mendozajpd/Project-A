@@ -7,18 +7,26 @@ using UnityEngine.InputSystem;
 //Takes and handles input and movement of the Player
 public class PlayerController : MonoBehaviour
 {
+    //movement-related variables
     [SerializeField] private float movementSpeed = 1f;
-    [SerializeField] private float collisionOffset = 0.05f;
-    [SerializeField] private ContactFilter2D movementFilter;
-  
-    Vector2 movementInput;
-    bool canMove = true;
+    private Vector2 movement;
 
-    Rigidbody2D rb;
-    List<RaycastHit2D> castCollision = new List<RaycastHit2D>();
-    Animator animator;
-    SpriteRenderer spriteRenderer;
+    //Dash variables
+    [Header("Dashing")]
+    [SerializeField] private float dashVelocity = 0.1f;
+    [SerializeField] private float dashTime = 0.1f;
+    private Vector2 dashDirection;
+    private bool isDashing = false;
+    private bool canDash = true;
+    private bool dashInput = false;
 
+    //Inspector References
+    private Rigidbody2D rb;
+    private Animator animator;
+    private SpriteRenderer spriteRenderer;
+    private TrailRenderer trailRenderer;
+    
+    //Scripts References
     public SwordAttack swordAttack;
 
     // Start is called before the first frame update
@@ -27,26 +35,37 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        trailRenderer = GetComponent<TrailRenderer>();
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
-        if (canMove)
-        { 
-            // if movement is not 0, move
-            if (movementInput != Vector2.zero)
-            {
-                bool success = TryMove(movementInput);
-                if (!success)
-                {
-                    success = TryMove(new Vector2(movementInput.x, 0));
-                }
-                if (!success)
-                {
-                    success = TryMove(new Vector2(0, movementInput.y));
-                }
+        //Sets the movement values based on the movement axis
+        movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        dashInput = Input.GetButtonDown("Dash");
 
-                animator.SetBool("isMoving", success);
+        if(dashInput && canDash)
+        {
+            dashDirection = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            if (dashDirection != Vector2.zero)
+            {
+                isDashing = true;
+                canDash = false;
+                trailRenderer.emitting = true;
+            }
+            StartCoroutine(StopDashing());
+        }
+        
+    }
+
+    private void FixedUpdate() 
+    {
+            // if movement is not 0, move;
+            if (movement != Vector2.zero)
+            {
+                rb.MovePosition(rb.position + movement.normalized * movementSpeed * Time.fixedDeltaTime);
+                animator.SetBool("isMoving", true);
+                
             }
             else
             {
@@ -54,48 +73,30 @@ public class PlayerController : MonoBehaviour
             }
 
             //Set sprite direction
-            if (movementInput.x > 0)
+            if (movement.x > 0)
             {
                 spriteRenderer.flipX = false;
             }
-            else if (movementInput.x < 0)
+            else if (movement.x < 0)
             {
                 spriteRenderer.flipX = true;
             }
-        }
+
+            if (isDashing)
+            {
+            rb.MovePosition(rb.position + dashDirection.normalized * dashVelocity);
+            return;
+            }
     }
 
-    bool TryMove(Vector2 direction)
-    {
-        //checks if there is a direction to move in
-        if(direction!= Vector2.zero)
-        {
-            //Check for potential collisions
-            int count = rb.Cast(
-                direction, // X and Y values between -1 and 1 that represents the direction from the body to look for collisions
-                movementFilter, //The settings that determine where a collision can occur on such as layers to collide with
-                castCollision, // List of collisions to store the found collisions into after the Cast is finished
-                movementSpeed * Time.fixedDeltaTime + collisionOffset); // The amount to cast equal to the movement plus an offset
 
-            if (count == 0)
-            {
-                rb.MovePosition(rb.position + direction * movementSpeed * Time.fixedDeltaTime);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        } else
-        {
-            return false;
-        }
-            
-    }
-
-    void OnMove(InputValue movementValue)
+    private IEnumerator StopDashing()
     {
-        movementInput = movementValue.Get<Vector2>();
+        yield return new WaitForSeconds(dashTime); //requires return before starting to yield
+        trailRenderer.emitting = false;
+        isDashing = false;
+        dashInput = false;
+        canDash = true;
     }
 
     void OnFire()
@@ -117,19 +118,4 @@ public class PlayerController : MonoBehaviour
     {
         swordAttack.StopAttack();
     }
-
-
-    //locks and unlocks movement
-    /*
-    public void LockMovement()
-    {
-        canMove = false;
-    }
-
-    public void UnlockMovement()
-    {
-        canMove = true;
-    }
-    */
-
 }
